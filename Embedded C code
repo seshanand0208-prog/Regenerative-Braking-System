@@ -1,0 +1,193 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+// -------------------------
+// Pin definitions
+// -------------------------
+#define ENA 25
+#define IN1 26
+#define IN2 27
+
+#define LED_PIN 2
+
+#define SDA_PIN 21
+#define SCL_PIN 22
+
+// -------------------------
+// LCD
+// -------------------------
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+// -------------------------
+// Motor PWM
+// -------------------------
+int motorSpeed = 200;   // 0 to 255
+
+
+// =====================================================
+// SETUP
+// =====================================================
+
+void setup() {
+
+  Serial.begin(115200);
+
+  // Motor pins
+  pinMode(ENA, OUTPUT);
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+
+  // LED
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
+
+  // I2C
+  Wire.begin(SDA_PIN, SCL_PIN);
+
+  // LCD
+  lcd.init();
+  lcd.backlight();
+
+  // Initial state
+  motorStop();
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("REGEN BRAKING");
+  lcd.setCursor(0, 1);
+  lcd.print("SYSTEM READY");
+
+  Serial.println("SYSTEM READY");
+
+  delay(2000);
+}
+
+
+// =====================================================
+// MAIN PROGRAM
+// =====================================================
+
+void loop() {
+
+  // ===================================================
+  // 1. ACCELERATION
+  // ===================================================
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("MODE: ACCEL");
+
+  lcd.setCursor(0, 1);
+  lcd.print("PWM: ");
+  lcd.print(motorSpeed);
+
+  Serial.println("ACCELERATION");
+
+  digitalWrite(LED_PIN, LOW);
+
+  motorForward(motorSpeed);
+
+  delay(5000);
+
+
+  // ===================================================
+  // 2. RUNNING
+  // ===================================================
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("MODE: RUNNING");
+
+  lcd.setCursor(0, 1);
+  lcd.print("PWM: ");
+  lcd.print(motorSpeed);
+
+  Serial.println("MOTOR RUNNING");
+
+  digitalWrite(LED_PIN, LOW);
+
+  motorForward(motorSpeed);
+
+  delay(5000);
+
+
+  // ===================================================
+  // 3. REGENERATIVE BRAKING
+  // ===================================================
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("REGEN BRAKING");
+
+  lcd.setCursor(0, 1);
+  lcd.print("BRAKE ACTIVE");
+
+  Serial.println("REGENERATIVE BRAKING");
+
+  digitalWrite(LED_PIN, HIGH);
+
+  motorBrake();
+
+  delay(3000);
+
+
+  // ===================================================
+  // 4. STOP
+  // =====================================================
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("MODE: STOPPED");
+
+  lcd.setCursor(0, 1);
+  lcd.print("MOTOR OFF");
+
+  Serial.println("MOTOR STOPPED");
+
+  digitalWrite(LED_PIN, LOW);
+
+  motorStop();
+
+  delay(3000);
+}
+
+
+// =====================================================
+// MOTOR FORWARD
+// =====================================================
+
+void motorForward(int speedValue) {
+
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+
+  analogWrite(ENA, speedValue);
+}
+
+
+// =====================================================
+// MOTOR STOP
+// =====================================================
+
+void motorStop() {
+
+  analogWrite(ENA, 0);
+
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
+}
+
+
+// =====================================================
+// ELECTRICAL / DYNAMIC BRAKING
+// =====================================================
+
+void motorBrake() {
+
+  // Enable motor driver
+  analogWrite(ENA, 255);
+
+  // Both inputs HIGH = electrical braking state
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, HIGH);
+}
